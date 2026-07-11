@@ -1,0 +1,621 @@
+.screen {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 7px;
+
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--accent-green);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  letter-spacing: -0.8px;
+}
+
+.description {
+  max-width: 330px;
+  margin-top: 8px;
+
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.rewardCard {
+  position: relative;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  padding: 16px;
+  border: 1px solid rgba(255, 217, 94, 0.2);
+  border-radius: 22px;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 212, 72, 0.18),
+      transparent 45%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 210, 69, 0.1),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 16px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(255, 202, 47, 0.05);
+}
+
+.rewardGlow {
+  position: absolute;
+  top: -65px;
+  right: -35px;
+
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+
+  background: rgba(255, 203, 48, 0.14);
+  filter: blur(38px);
+  pointer-events: none;
+}
+
+.rewardIcon {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(255, 222, 111, 0.22);
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 219, 91, 0.24),
+      rgba(119, 79, 9, 0.08)
+    );
+
+  font-size: 23px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 22px rgba(255, 206, 54, 0.08);
+}
+
+.rewardContent {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.rewardContent span {
+  font-size: 8px;
+  font-weight: 900;
+  color: #ffd95d;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+}
+
+.rewardContent strong {
+  margin-top: 3px;
+
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.rewardContent p {
+  max-width: 250px;
+  margin-top: 5px;
+
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.rewardBadge {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  z-index: 2;
+
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 222, 105, 0.17);
+  border-radius: 9px;
+
+  background: rgba(255, 205, 48, 0.09);
+
+  font-size: 7px;
+  font-weight: 900;
+  color: #ffe07b;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.linkCard {
+  position: relative;
+  overflow: hidden;
+
+  padding: 16px;
+  border: 1px solid rgba(96, 255, 125, 0.14);
+  border-radius: 22px;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(76, 255, 111, 0.12),
+      transparent 44%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(75, 255, 111, 0.07),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.065),
+    0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+.cardGlow {
+  position: absolute;
+  top: -60px;
+  right: -45px;
+
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+
+  background: rgba(69, 255, 104, 0.1);
+  filter: blur(35px);
+  pointer-events: none;
+}
+
+.linkHeader {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linkIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(106, 255, 135, 0.17);
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(74, 255, 111, 0.16),
+      rgba(31, 94, 48, 0.07)
+    );
+
+  font-size: 21px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 20px rgba(79, 255, 111, 0.08);
+}
+
+.linkHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.linkHeading span {
+  font-size: 9px;
+  font-weight: 900;
+  color: var(--accent-green);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.linkHeading strong {
+  font-size: 14px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.linkBox {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 15px;
+  padding: 7px;
+  padding-left: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 15px;
+
+  background: rgba(0, 0, 0, 0.22);
+
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.32);
+}
+
+.linkText {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1 1 auto;
+
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyButton {
+  flex: 0 0 auto;
+
+  min-width: 62px;
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(96, 255, 125, 0.22);
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #72ff84,
+      #32bc55
+    );
+
+  font-size: 10px;
+  font-weight: 900;
+  color: #061208;
+  text-transform: uppercase;
+
+  box-shadow:
+    0 0 18px rgba(79, 255, 111, 0.14);
+
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.copyButton:active {
+  transform: scale(0.96);
+}
+
+.copiedButton {
+  background:
+    linear-gradient(
+      145deg,
+      #ffe477,
+      #d9a72b
+    );
+
+  color: #1a1304;
+}
+
+.infoCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.infoIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 218, 103, 0.15);
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 212, 83, 0.14),
+      rgba(110, 76, 12, 0.06)
+    );
+
+  font-size: 19px;
+}
+
+.infoContent {
+  min-width: 0;
+}
+
+.infoContent h2 {
+  font-size: 14px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.infoContent p {
+  margin-top: 5px;
+
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.referralsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionHeader h2 {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.sectionHeader span {
+  display: grid;
+  place-items: center;
+
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(106, 255, 135, 0.13);
+  border-radius: 10px;
+
+  background: rgba(76, 255, 111, 0.07);
+
+  font-size: 10px;
+  font-weight: 900;
+  color: #8fff9f;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 26px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 21px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.015)
+    );
+
+  text-align: center;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(113, 255, 141, 0.12);
+  border-radius: 17px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(76, 255, 111, 0.12),
+      rgba(33, 99, 49, 0.04)
+    );
+
+  font-size: 23px;
+}
+
+.emptyState h3 {
+  margin-top: 12px;
+
+  font-size: 14px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.emptyState p {
+  max-width: 280px;
+  margin-top: 6px;
+
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.referralList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.referralCard {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 19px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 24px rgba(0, 0, 0, 0.19);
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(103, 255, 133, 0.14);
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(77, 255, 113, 0.17),
+      rgba(28, 96, 45, 0.07)
+    );
+
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.referralInfo {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.referralInfo strong {
+  overflow: hidden;
+
+  font-size: 12px;
+  font-weight: 900;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referralInfo span {
+  overflow: hidden;
+
+  font-size: 9px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referralReward {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.referralReward span {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.referralReward strong {
+  font-size: 11px;
+  font-weight: 900;
+  color: #8fff9f;
+}
+
+@media (max-width: 360px) {
+  .title {
+    font-size: 25px;
+  }
+
+  .rewardCard {
+    padding: 14px;
+  }
+
+  .rewardIcon {
+    width: 46px;
+    height: 46px;
+  }
+
+  .rewardContent strong {
+    font-size: 16px;
+  }
+
+  .rewardContent p {
+    padding-right: 4px;
+    font-size: 8px;
+  }
+
+  .linkCard {
+    padding: 14px;
+  }
+
+  .linkIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .copyButton {
+    min-width: 56px;
+    padding: 0 10px;
+  }
+}

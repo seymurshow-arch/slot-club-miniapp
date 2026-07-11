@@ -1,0 +1,893 @@
+.screen {
+  position: relative;
+
+  display: flex;
+  width: 100%;
+  min-height: calc(
+    100dvh -
+    var(--header-height) -
+    var(--navigation-height) -
+    40px
+  );
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.quickActions {
+  position: relative;
+  z-index: 10;
+
+  display: grid;
+  width: 100%;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.actionButton {
+  display: flex;
+  min-width: 0;
+  min-height: 64px;
+  align-items: center;
+  gap: 10px;
+
+  padding: 11px 12px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.07);
+  border-radius: 19px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.07),
+    0 12px 30px rgba(0, 0, 0, 0.25);
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.actionButton:active {
+  transform: scale(0.97);
+}
+
+.actionIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 38px;
+  height: 38px;
+  border: 1px solid
+    rgba(110, 255, 139, 0.16);
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(77, 255, 117, 0.18),
+      rgba(28, 90, 48, 0.08)
+    );
+
+  font-size: 19px;
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.06),
+    0 0 16px
+      rgba(63, 255, 108, 0.07);
+}
+
+.actionText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.actionText strong {
+  overflow: hidden;
+  width: 100%;
+
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionText small {
+  overflow: hidden;
+  width: 100%;
+
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tapArea {
+  position: relative;
+
+  display: flex;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 440px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+
+  overflow: hidden;
+}
+
+.backgroundPulse,
+.backgroundPulseSecond {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.backgroundPulse {
+  width: 360px;
+  height: 360px;
+
+  transform: translate(-50%, -52%);
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(70, 255, 111, 0.2) 0%,
+      rgba(35, 153, 72, 0.08) 42%,
+      transparent 74%
+    );
+
+  filter: blur(18px);
+
+  animation:
+    backgroundBreathing
+    4.5s
+    ease-in-out
+    infinite;
+}
+
+.backgroundPulseSecond {
+  width: 460px;
+  height: 460px;
+
+  transform: translate(-50%, -50%);
+
+  border: 1px solid
+    rgba(93, 255, 126, 0.04);
+
+  background:
+    radial-gradient(
+      circle,
+      transparent 42%,
+      rgba(74, 255, 112, 0.035) 52%,
+      transparent 68%
+    );
+
+  animation:
+    backgroundBreathingSecond
+    6.5s
+    ease-in-out
+    infinite;
+}
+
+.lightRing,
+.lightRingSecond {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.lightRing {
+  width: 310px;
+  height: 310px;
+  border: 1px solid
+    rgba(120, 255, 144, 0.12);
+
+  transform: translate(-50%, -50%);
+
+  box-shadow:
+    0 0 28px
+      rgba(61, 255, 102, 0.05),
+    inset 0 0 28px
+      rgba(61, 255, 102, 0.04);
+
+  animation:
+    ringWave
+    4s
+    ease-out
+    infinite;
+}
+
+.lightRingSecond {
+  width: 360px;
+  height: 360px;
+  border: 1px solid
+    rgba(120, 255, 144, 0.07);
+
+  transform: translate(-50%, -50%);
+
+  animation:
+    ringWave
+    4s
+    ease-out
+    2s
+    infinite;
+}
+
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+
+  background:
+    rgba(137, 255, 154, 0.78);
+
+  box-shadow:
+    0 0 8px
+      rgba(84, 255, 112, 0.9),
+    0 0 16px
+      rgba(84, 255, 112, 0.45);
+
+  opacity: 0;
+
+  animation:
+    particleFloat
+    6s
+    linear
+    infinite;
+}
+
+.particleOne {
+  left: 17%;
+  bottom: 18%;
+  animation-delay: 0s;
+}
+
+.particleTwo {
+  left: 29%;
+  bottom: 8%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 1.1s;
+}
+
+.particleThree {
+  right: 20%;
+  bottom: 14%;
+  animation-delay: 2s;
+}
+
+.particleFour {
+  right: 32%;
+  bottom: 4%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 3.2s;
+}
+
+.particleFive {
+  left: 11%;
+  bottom: 39%;
+  width: 5px;
+  height: 5px;
+  animation-delay: 4.1s;
+}
+
+.particleSix {
+  right: 11%;
+  bottom: 34%;
+  animation-delay: 0.7s;
+}
+
+.particleSeven {
+  left: 43%;
+  bottom: 6%;
+  width: 2px;
+  height: 2px;
+  animation-delay: 2.7s;
+}
+
+.particleEight {
+  right: 44%;
+  bottom: 20%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 5s;
+}
+
+.charmsLayer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 4;
+
+  height: 190px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.charmPosition {
+  position: absolute;
+
+  transform: translate(-50%, 0);
+  transform-origin: 50% 0;
+}
+
+.charmFloat {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  transform-origin: 50% 0;
+
+  animation:
+    charmSwing
+    2.8s
+    ease-in-out
+    var(--charm-delay)
+    infinite;
+}
+
+.charmImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+
+  filter:
+    drop-shadow(
+      0 8px 10px
+      rgba(0, 0, 0, 0.34)
+    );
+}
+
+.tapDecor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+
+  color:
+    rgba(160, 255, 176, 0.78);
+
+  text-shadow:
+    0 0 8px
+      rgba(92, 255, 120, 0.7),
+    0 0 18px
+      rgba(92, 255, 120, 0.35);
+
+  animation:
+    starTwinkle
+    2.8s
+    ease-in-out
+    infinite;
+}
+
+.starOne {
+  top: 18%;
+  left: 14%;
+  font-size: 18px;
+  animation-delay: 0s;
+}
+
+.starTwo {
+  top: 25%;
+  right: 13%;
+  font-size: 26px;
+  animation-delay: 0.8s;
+}
+
+.starThree {
+  bottom: 24%;
+  left: 18%;
+  font-size: 14px;
+  animation-delay: 1.4s;
+}
+
+.starFour {
+  right: 19%;
+  bottom: 18%;
+  font-size: 19px;
+  animation-delay: 2s;
+}
+
+.starFive {
+  top: 43%;
+  left: 8%;
+  font-size: 12px;
+  animation-delay: 0.4s;
+}
+
+.starSix {
+  top: 47%;
+  right: 8%;
+  font-size: 15px;
+  animation-delay: 1.7s;
+}
+
+.tapRewards {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tapReward {
+  position: absolute;
+
+  display: block;
+
+  font-size:
+    clamp(22px, 7vw, 32px);
+  font-weight: 1000;
+  line-height: 1;
+  color: #efffea;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+
+  text-shadow:
+    0 2px 0
+      rgba(5, 75, 31, 0.85),
+    0 0 8px
+      rgba(109, 255, 128, 1),
+    0 0 20px
+      rgba(76, 255, 108, 0.65);
+
+  transform:
+    translate(-50%, -50%);
+
+  will-change:
+    transform,
+    opacity;
+
+  animation:
+    tapRewardFly
+    850ms
+    ease-out
+    forwards;
+}
+
+.tapButtonWrap {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: min(68vw, 300px);
+  height: min(68vw, 300px);
+
+  animation:
+    buttonFloat
+    4.2s
+    ease-in-out
+    infinite;
+}
+
+.tapGlow {
+  position: absolute;
+  inset: 2%;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(96, 255, 124, 0.34) 0%,
+      rgba(53, 216, 89, 0.14) 42%,
+      transparent 72%
+    );
+
+  filter: blur(18px);
+
+  animation:
+    glowPulse
+    2.8s
+    ease-in-out
+    infinite;
+}
+
+.tapButton {
+  position: relative;
+  z-index: 5;
+
+  display: block;
+  overflow: hidden;
+
+  width: min(62vw, 260px);
+  height: min(62vw, 260px);
+  max-width: 260px;
+  max-height: 260px;
+
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+
+  box-shadow:
+    0 0 0 8px
+      rgba(76, 255, 109, 0.04),
+    0 24px 55px
+      rgba(0, 0, 0, 0.48),
+    0 0 48px
+      rgba(58, 255, 99, 0.16);
+
+  animation:
+    buttonBreathing
+      3s
+      ease-in-out
+      infinite,
+    buttonTilt
+      7s
+      ease-in-out
+      infinite;
+
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color:
+    transparent;
+
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    opacity 120ms ease;
+}
+
+.tapSkinImage {
+  object-fit: contain;
+  object-position: center;
+
+  pointer-events: none;
+  user-select: none;
+
+  filter:
+    drop-shadow(
+      0 18px 22px
+      rgba(0, 0, 0, 0.34)
+    );
+}
+
+.tapButton:active {
+  transform: scale(0.93);
+  filter: brightness(1.12);
+  animation-play-state: paused;
+}
+
+.tapButton:disabled {
+  cursor: not-allowed;
+  filter:
+    grayscale(0.35)
+    brightness(0.72);
+  opacity: 0.72;
+}
+
+.tapHint {
+  position: relative;
+  z-index: 5;
+
+  font-size: 11px;
+  font-weight: 800;
+  color:
+    rgba(218, 255, 223, 0.62);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+
+  animation:
+    hintPulse
+    2.4s
+    ease-in-out
+    infinite;
+}
+
+@keyframes charmSwing {
+  0%,
+  100% {
+    transform:
+      rotate(calc(var(--charm-rotate) - 8deg))
+      translateX(-2px);
+  }
+
+  50% {
+    transform:
+      rotate(calc(var(--charm-rotate) + 8deg))
+      translateX(2px);
+  }
+}
+
+@keyframes tapRewardFly {
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -35%)
+      scale(0.65);
+  }
+
+  18% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -70%)
+      scale(1.18);
+  }
+
+  45% {
+    opacity: 1;
+
+    transform:
+      translate(
+        calc(
+          -50% +
+          var(--reward-drift)
+        ),
+        -115%
+      )
+      scale(1);
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(
+        calc(
+          -50% +
+          var(--reward-drift)
+        ),
+        -250%
+      )
+      scale(0.82);
+  }
+}
+
+@keyframes buttonFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes buttonBreathing {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.025;
+  }
+}
+
+@keyframes buttonTilt {
+  0%,
+  100% {
+    rotate: -0.8deg;
+  }
+
+  50% {
+    rotate: 0.8deg;
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    scale: 0.96;
+  }
+
+  50% {
+    opacity: 1;
+    scale: 1.08;
+  }
+}
+
+@keyframes backgroundBreathing {
+  0%,
+  100% {
+    opacity: 0.65;
+    scale: 0.94;
+  }
+
+  50% {
+    opacity: 1;
+    scale: 1.08;
+  }
+}
+
+@keyframes backgroundBreathingSecond {
+  0%,
+  100% {
+    opacity: 0.35;
+    scale: 0.94;
+  }
+
+  50% {
+    opacity: 0.75;
+    scale: 1.1;
+  }
+}
+
+@keyframes ringWave {
+  0% {
+    opacity: 0;
+    scale: 0.75;
+  }
+
+  25% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.18;
+  }
+}
+
+@keyframes starTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+
+    transform:
+      scale(0.72)
+      rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform:
+      scale(1.18)
+      rotate(12deg);
+  }
+}
+
+@keyframes particleFloat {
+  0% {
+    opacity: 0;
+
+    transform:
+      translateY(0)
+      scale(0.6);
+  }
+
+  15% {
+    opacity: 0.9;
+  }
+
+  75% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translateY(-260px)
+      scale(1.2);
+  }
+}
+
+@keyframes hintPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (max-width: 420px) {
+  .charmsLayer {
+    height: 170px;
+  }
+}
+
+@media (max-width: 360px) {
+  .screen {
+    gap: 13px;
+  }
+
+  .quickActions {
+    gap: 7px;
+  }
+
+  .actionButton {
+    min-height: 58px;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 16px;
+  }
+
+  .actionIcon {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+  }
+
+  .actionText strong {
+    font-size: 12px;
+  }
+
+  .tapArea {
+    min-height: 390px;
+  }
+
+  .tapButtonWrap {
+    width: min(66vw, 250px);
+    height: min(66vw, 250px);
+  }
+
+  .tapButton {
+    width: min(58vw, 220px);
+    height: min(58vw, 220px);
+  }
+}
+
+@media (
+  prefers-reduced-motion: reduce
+) {
+  .backgroundPulse,
+  .backgroundPulseSecond,
+  .lightRing,
+  .lightRingSecond,
+  .particle,
+  .star,
+  .tapButtonWrap,
+  .tapGlow,
+  .tapButton,
+  .tapHint {
+    animation: none;
+  }
+
+  .tapReward {
+    animation-duration: 500ms;
+  }
+}

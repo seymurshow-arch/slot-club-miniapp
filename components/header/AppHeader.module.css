@@ -1,0 +1,325 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  width: 100%;
+  max-width: var(--page-width);
+  min-height: var(--header-height);
+  padding:
+    calc(10px + env(safe-area-inset-top))
+    var(--page-padding)
+    10px;
+
+  transform: translateX(-50%);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(6, 13, 10, 0.98) 0%,
+      rgba(6, 10, 9, 0.92) 78%,
+      rgba(6, 10, 9, 0) 100%
+    );
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.profile {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatarWrap {
+  position: relative;
+
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 58px;
+  height: 58px;
+}
+
+.avatar {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border: 1px solid rgba(124, 255, 125, 0.24);
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 38% 30%,
+      rgba(92, 255, 137, 0.24) 0%,
+      rgba(21, 80, 48, 0.14) 48%,
+      rgba(5, 18, 12, 0.92) 100%
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.26);
+}
+
+.avatarFrame {
+  z-index: 2;
+
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+
+  transform:
+    translate(
+      var(--avatar-frame-offset-x),
+      var(--avatar-frame-offset-y)
+    )
+    scale(var(--avatar-frame-scale));
+
+  transform-origin: center;
+}
+
+.avatar span {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  color: #dffff0;
+}
+
+.profileInfo {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.playerName {
+  overflow: hidden;
+  max-width: 92px;
+
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vipBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  min-height: 20px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 216, 107, 0.2);
+  border-radius: var(--radius-round);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 222, 118, 0.15),
+      rgba(255, 184, 67, 0.07)
+    );
+
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffd978;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.vipIcon {
+  font-size: 8px;
+  color: #ffeab0;
+}
+
+.stats {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.statCard {
+  display: flex;
+  min-width: 96px;
+  height: 48px;
+  align-items: center;
+  gap: 8px;
+
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 17px;
+}
+
+.statCard:nth-child(2) {
+  min-width: 128px;
+}
+
+.balanceIcon,
+.energyIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.balanceIcon {
+  border: 1px solid rgba(148, 255, 138, 0.28);
+
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #d7ffbd 0%,
+      #71ff6d 32%,
+      #1c8d42 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 3px rgba(5, 34, 18, 0.42),
+    0 0 14px rgba(95, 255, 113, 0.2);
+}
+
+.energyIcon {
+  border: 1px solid rgba(255, 216, 106, 0.24);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 222, 103, 0.22),
+      rgba(138, 88, 15, 0.12)
+    );
+
+  font-size: 14px;
+  color: #ffd96d;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 14px rgba(255, 202, 76, 0.12);
+}
+
+.statText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-muted);
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.statValue {
+  overflow: hidden;
+  max-width: 66px;
+
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statCard:nth-child(2) .statValue {
+  overflow: visible;
+  max-width: none;
+  text-overflow: clip;
+}
+
+.statMax {
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+@media (max-width: 420px) {
+  .header {
+    gap: 7px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .avatarWrap {
+    width: 54px;
+    height: 54px;
+  }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .profile {
+    gap: 8px;
+  }
+
+  .playerName {
+    max-width: 72px;
+    font-size: 14px;
+  }
+
+  .stats {
+    gap: 5px;
+  }
+
+  .statCard {
+    min-width: 84px;
+    height: 44px;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 15px;
+  }
+
+  .balanceIcon,
+  .energyIcon {
+    width: 23px;
+    height: 23px;
+  }
+
+  .statValue {
+    max-width: 56px;
+    font-size: 12px;
+  }
+
+  .statMax {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .profileInfo {
+    display: none;
+  }
+
+  .statCard {
+    min-width: 82px;
+  }
+}

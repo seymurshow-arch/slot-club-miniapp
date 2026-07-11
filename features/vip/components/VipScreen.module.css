@@ -1,0 +1,540 @@
+.screen {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 7px;
+
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--accent-green);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  letter-spacing: -0.8px;
+}
+
+.description {
+  max-width: 330px;
+  margin-top: 8px;
+
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.statusCard {
+  position: relative;
+  overflow: hidden;
+
+  padding: 16px;
+  border: 1px solid rgba(255, 218, 96, 0.18);
+  border-radius: 22px;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 218, 96, 0.14),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 214, 91, 0.09),
+      rgba(255, 255, 255, 0.025)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+.statusGlow {
+  position: absolute;
+  top: -65px;
+  right: -45px;
+
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+
+  background: rgba(255, 213, 74, 0.13);
+  filter: blur(36px);
+  pointer-events: none;
+}
+
+.statusTop {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vipBadge {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 226, 130, 0.23);
+  border-radius: 17px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 222, 105, 0.24),
+      rgba(117, 78, 9, 0.11)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 22px rgba(255, 211, 61, 0.12);
+}
+
+.vipBadge span {
+  font-size: 8px;
+  font-weight: 900;
+  color: #e8b94d;
+  letter-spacing: 0.8px;
+}
+
+.vipBadge strong {
+  margin-top: 1px;
+
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffe993;
+}
+
+.statusInfo {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.statusInfo span {
+  font-size: 8px;
+  font-weight: 900;
+  color: #dfb44f;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.statusInfo strong {
+  overflow: hidden;
+
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusInfo small {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.nextLevel {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.nextLevel span {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.nextLevel strong {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffe17c;
+}
+
+.progressInfo {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 15px;
+
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.progressInfo strong {
+  color: #ffe27f;
+}
+
+.progressTrack {
+  position: relative;
+  z-index: 1;
+
+  overflow: hidden;
+
+  width: 100%;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.42);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #d79d27,
+      #ffe46f
+    );
+
+  box-shadow: 0 0 13px rgba(255, 211, 72, 0.32);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionHeader h2 {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.benefitsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.benefitCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 14px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 19px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    );
+
+  text-align: center;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 11px 26px rgba(0, 0, 0, 0.2);
+}
+
+.benefitIcon {
+  display: grid;
+  place-items: center;
+
+  width: 39px;
+  height: 39px;
+  border: 1px solid rgba(255, 221, 111, 0.15);
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 218, 92, 0.15),
+      rgba(105, 73, 12, 0.06)
+    );
+
+  font-size: 18px;
+}
+
+.benefitCard h3 {
+  margin-top: 10px;
+
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.benefitCard p {
+  margin-top: 5px;
+
+  font-size: 8px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.levelList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.levelCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.016)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 11px 26px rgba(0, 0, 0, 0.2);
+}
+
+.unlockedLevel {
+  border-color: rgba(110, 255, 137, 0.1);
+}
+
+.currentLevel {
+  border-color: rgba(255, 220, 106, 0.23);
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 215, 89, 0.1),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 213, 82, 0.085),
+      rgba(255, 255, 255, 0.02)
+    );
+}
+
+.levelIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 43px;
+  height: 43px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0.02)
+    );
+
+  font-size: 18px;
+  color: #7e8581;
+}
+
+.unlockedLevel .levelIcon {
+  border-color: rgba(117, 255, 143, 0.14);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(77, 255, 113, 0.13),
+      rgba(32, 96, 48, 0.05)
+    );
+
+  color: #8dff9e;
+}
+
+.currentLevel .levelIcon {
+  border-color: rgba(255, 223, 116, 0.2);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 220, 100, 0.2),
+      rgba(110, 74, 9, 0.08)
+    );
+
+  color: #ffe58c;
+}
+
+.levelInfo {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.levelInfo span {
+  font-size: 8px;
+  font-weight: 900;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.currentLevel .levelInfo span {
+  color: #dfb64f;
+}
+
+.levelInfo strong {
+  overflow: hidden;
+
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.levelInfo small {
+  overflow: hidden;
+
+  font-size: 9px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.levelReward {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.levelReward span {
+  font-size: 7px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.levelReward strong {
+  font-size: 11px;
+  font-weight: 900;
+  color: #8fff9f;
+}
+
+.currentLevel .levelReward strong {
+  color: #ffe17c;
+}
+
+.levelStatus {
+  grid-column: 2 / -1;
+
+  justify-self: flex-end;
+
+  margin-top: -3px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  font-size: 7px;
+  font-weight: 900;
+  color: var(--text-muted);
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.unlockedLevel .levelStatus {
+  border-color: rgba(105, 255, 133, 0.11);
+
+  background: rgba(75, 255, 111, 0.055);
+
+  color: #7fe891;
+}
+
+.currentLevel .levelStatus {
+  border-color: rgba(255, 220, 109, 0.17);
+
+  background: rgba(255, 211, 73, 0.08);
+
+  color: #ffe180;
+}
+
+@media (max-width: 360px) {
+  .title {
+    font-size: 25px;
+  }
+
+  .statusCard {
+    padding: 14px;
+  }
+
+  .vipBadge {
+    width: 49px;
+    height: 49px;
+  }
+
+  .vipBadge strong {
+    font-size: 20px;
+  }
+
+  .benefitsGrid {
+    gap: 7px;
+  }
+
+  .benefitCard {
+    padding: 12px 7px;
+  }
+
+  .benefitCard h3 {
+    font-size: 10px;
+  }
+
+  .levelCard {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .levelIcon {
+    width: 39px;
+    height: 39px;
+  }
+}
