@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useGameStore } from "@/game/gameStore";
 import { PlayerApiError } from "@/lib/playerApi";
 import {
   createPlayerShopRequestId,
   equipPlayerShopItem,
-  fetchPlayerShop,
   purchasePlayerShopItem,
   unequipPlayerShopItem,
   type PlayerShopItem,
@@ -21,6 +20,10 @@ type ShopCategory = (typeof categories)[number];
 type ShopAction = "purchase" | "equip" | "unequip";
 
 type ShopScreenProps = {
+  items: PlayerShopItem[];
+  isLoading: boolean;
+  loadingError: string | null;
+  onRefresh: () => Promise<void>;
   onBack: () => void;
 };
 
@@ -238,11 +241,14 @@ function getErrorMessage(error: unknown): string {
   return "An unexpected shop error occurred.";
 }
 
-export function ShopScreen({ onBack }: ShopScreenProps) {
+export function ShopScreen({
+  items,
+  isLoading,
+  loadingError,
+  onRefresh,
+  onBack,
+}: ShopScreenProps) {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("All");
-  const [items, setItems] = useState<PlayerShopItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeAction, setActiveAction] = useState<{
     itemId: string;
@@ -254,58 +260,22 @@ export function ShopScreen({ onBack }: ShopScreenProps) {
   const balance = useGameStore((state) => state.balance);
   const applyServerState = useGameStore((state) => state.applyServerState);
 
-  const loadCatalog = useCallback(async (signal?: AbortSignal): Promise<void> => {
-    setLoadingError(null);
-    const catalog = await fetchPlayerShop(signal);
-    setItems(catalog);
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    setIsLoading(true);
-
-    void loadCatalog(controller.signal)
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-
-        setLoadingError(getErrorMessage(error));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [loadCatalog]);
-
   const visibleItems = useMemo(
     () => items.filter((item) => matchesCategory(item, activeCategory)),
     [items, activeCategory],
   );
-
-  async function refreshCatalog(): Promise<void> {
-    const refreshedCatalog = await fetchPlayerShop();
-    setItems(refreshedCatalog);
-  }
 
   async function handleRetryCatalog(): Promise<void> {
     if (isLoading) {
       return;
     }
 
-    setIsLoading(true);
-    setLoadingError(null);
+    setActionError(null);
 
     try {
-      await loadCatalog();
+      await onRefresh();
     } catch (error) {
-      setLoadingError(getErrorMessage(error));
-    } finally {
-      setIsLoading(false);
+      setActionError(getErrorMessage(error));
     }
   }
 
@@ -336,7 +306,7 @@ export function ShopScreen({ onBack }: ShopScreenProps) {
 
       applyServerState(result.state);
       pendingRequestIds.current.delete(item.id);
-      await refreshCatalog();
+      await onRefresh();
     } catch (error) {
       if (error instanceof PlayerApiError && error.code !== "NETWORK_ERROR") {
         pendingRequestIds.current.delete(item.id);
@@ -369,7 +339,7 @@ export function ShopScreen({ onBack }: ShopScreenProps) {
         await unequipPlayerShopItem({ shopItemId: item.id });
       }
 
-      await refreshCatalog();
+      await onRefresh();
     } catch (error) {
       setActionError(getErrorMessage(error));
     } finally {

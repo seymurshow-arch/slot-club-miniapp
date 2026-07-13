@@ -5,7 +5,6 @@ import {
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -17,10 +16,7 @@ import {
   PlayerApiError,
   submitPlayerTap,
 } from "@/lib/playerApi";
-import {
-  fetchPlayerShop,
-  type PlayerShopItem,
-} from "@/lib/playerShopApi";
+import type { PlayerShopItem } from "@/lib/playerShopApi";
 
 import styles from "./ClubScreen.module.css";
 
@@ -127,6 +123,7 @@ function readVisualMetadata(
 }
 
 type ClubScreenProps = {
+  shopItems: PlayerShopItem[];
   onOpenShop: () => void;
   onOpenLeaderboard: () => void;
 };
@@ -163,6 +160,7 @@ function parseRewardAmount(
 }
 
 export function ClubScreen({
+  shopItems,
   onOpenShop,
   onOpenLeaderboard,
 }: ClubScreenProps) {
@@ -191,8 +189,6 @@ export function ClubScreen({
   const [isTapRequestPending, setIsTapRequestPending] =
     useState(false);
 
-  const [shopItems, setShopItems] =
-    useState<PlayerShopItem[]>([]);
 
   const canTap =
     energy >= energyCostPerTap &&
@@ -214,96 +210,6 @@ export function ClubScreen({
         Boolean(item.imageUrl),
     );
 
-  useEffect(() => {
-    let isDisposed = false;
-    let activeController:
-      | AbortController
-      | null = null;
-
-    async function synchronizeShop() {
-      activeController?.abort();
-
-      const controller =
-        new AbortController();
-
-      activeController = controller;
-
-      try {
-        const items = await fetchPlayerShop(
-          controller.signal,
-        );
-
-        if (!isDisposed) {
-          setShopItems(items);
-        }
-      } catch (error) {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-
-        if (error instanceof PlayerApiError) {
-          console.error(
-            "Player shop synchronization failed:",
-            {
-              code: error.code,
-              status: error.status,
-              message: error.message,
-            },
-          );
-
-          return;
-        }
-
-        console.error(
-          "Player shop synchronization failed:",
-          error,
-        );
-      }
-    }
-
-    void synchronizeShop();
-
-    function handleVisibilityChange() {
-      if (
-        document.visibilityState ===
-        "visible"
-      ) {
-        void synchronizeShop();
-      }
-    }
-
-    function handleWindowFocus() {
-      void synchronizeShop();
-    }
-
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibilityChange,
-    );
-
-    window.addEventListener(
-      "focus",
-      handleWindowFocus,
-    );
-
-    return () => {
-      isDisposed = true;
-      activeController?.abort();
-
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange,
-      );
-
-      window.removeEventListener(
-        "focus",
-        handleWindowFocus,
-      );
-    };
-  }, []);
 
   function showTapReward(params: {
     amount: number;
