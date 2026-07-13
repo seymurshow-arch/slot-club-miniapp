@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -45,7 +46,9 @@ type TelegramWebApp = {
   expand?: () => void;
 };
 
-const PLAYER_STATE_SYNC_INTERVAL_MS = 15_000;
+const PLAYER_STATE_SYNC_INTERVAL_MS = 60_000;
+const FOREGROUND_REFRESH_MIN_HIDDEN_MS = 30_000;
+const FOREGROUND_REFRESH_COOLDOWN_MS = 30_000;
 
 function initializeTelegramWebApp() {
   const telegram = (
@@ -107,30 +110,63 @@ export default function HomePage() {
     (state) => state.applyServerState,
   );
 
+  const lastPlayerStateSyncAtRef =
+    useRef(0);
+  const lastShopSyncAtRef = useRef(0);
+  const hiddenAtRef = useRef<number | null>(
+    null,
+  );
+  const stateRequestPromiseRef =
+    useRef<Promise<void> | null>(null);
+  const shopRequestPromiseRef =
+    useRef<Promise<void> | null>(null);
+
   const refreshShopCatalog = useCallback(
     async (signal?: AbortSignal) => {
-      setIsShopLoading(true);
-      setShopLoadingError(null);
+      if (shopRequestPromiseRef.current) {
+        return shopRequestPromiseRef.current;
+      }
+
+      const requestPromise = (async () => {
+        setIsShopLoading(true);
+        setShopLoadingError(null);
+
+        try {
+          const catalog = await fetchPlayerShop(
+            signal,
+          );
+
+          setShopItems(catalog);
+          lastShopSyncAtRef.current =
+            Date.now();
+        } catch (error) {
+          if (isAbortError(error)) {
+            throw error;
+          }
+
+          setShopLoadingError(
+            getShopErrorMessage(error),
+          );
+
+          throw error;
+        } finally {
+          if (!signal?.aborted) {
+            setIsShopLoading(false);
+          }
+        }
+      })();
+
+      shopRequestPromiseRef.current =
+        requestPromise;
 
       try {
-        const catalog = await fetchPlayerShop(
-          signal,
-        );
-
-        setShopItems(catalog);
-      } catch (error) {
-        if (isAbortError(error)) {
-          throw error;
-        }
-
-        setShopLoadingError(
-          getShopErrorMessage(error),
-        );
-
-        throw error;
+        await requestPromise;
       } finally {
-        if (!signal?.aborted) {
-          setIsShopLoading(false);
+        if (
+          shopRequestPromiseRef.current ===
+          requestPromise
+        ) {
+          shopRequestPromiseRef.current = null;
         }
       }
     },
@@ -165,6 +201,10 @@ export default function HomePage() {
       | null = null;
 
     async function synchronizePlayerState() {
+      if (stateRequestPromiseRef.current) {
+        return stateRequestPromiseRef.current;
+      }
+
       activeStateController?.abort();
 
       const controller =
@@ -172,36 +212,55 @@ export default function HomePage() {
 
       activeStateController = controller;
 
+      const requestPromise = (async () => {
+        try {
+          const serverState =
+            await fetchPlayerState({
+              initData,
+              signal: controller.signal,
+            });
+
+          if (isDisposed) {
+            return;
+          }
+
+          const currentRevision =
+            useGameStore.getState()
+              .serverRevision;
+
+          if (
+            serverState.revision >=
+            currentRevision
+          ) {
+            applyServerState(serverState);
+          }
+
+          lastPlayerStateSyncAtRef.current =
+            Date.now();
+        } catch (error) {
+          if (isAbortError(error)) {
+            return;
+          }
+
+          console.error(
+            "Player state synchronization failed:",
+            error,
+          );
+        }
+      })();
+
+      stateRequestPromiseRef.current =
+        requestPromise;
+
       try {
-        const serverState =
-          await fetchPlayerState({
-            initData,
-            signal: controller.signal,
-          });
-
-        if (isDisposed) {
-          return;
-        }
-
-        const currentRevision =
-          useGameStore.getState()
-            .serverRevision;
-
+        await requestPromise;
+      } finally {
         if (
-          serverState.revision >=
-          currentRevision
+          stateRequestPromiseRef.current ===
+          requestPromise
         ) {
-          applyServerState(serverState);
+          stateRequestPromiseRef.current = null;
         }
-      } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
-
-        console.error(
-          "Player state synchronization failed:",
-          error,
-        );
       }
     }
 
@@ -240,8 +299,11 @@ export default function HomePage() {
         return;
       }
 
+      const now = Date.now();
+
       if (stateResult.status === "fulfilled") {
         applyServerState(stateResult.value);
+        lastPlayerStateSyncAtRef.current = now;
         setLoadingError(null);
         setLoadingStatus("ready");
       } else {
@@ -265,6 +327,7 @@ export default function HomePage() {
 
       if (shopResult.status === "fulfilled") {
         setShopItems(shopResult.value);
+        lastShopSyncAtRef.current = now;
         setShopLoadingError(null);
       } else {
         setShopLoadingError(
@@ -281,21 +344,57 @@ export default function HomePage() {
 
     const intervalId = window.setInterval(
       () => {
-        void synchronizePlayerState();
+        if (
+          document.visibilityState ===
+          "visible"
+        ) {
+          void synchronizePlayerState();
+        }
       },
       PLAYER_STATE_SYNC_INTERVAL_MS,
     );
 
     function handleVisibilityChange() {
+      const now = Date.now();
+
       if (
-        document.visibilityState !==
-        "visible"
+        document.visibilityState ===
+        "hidden"
+      ) {
+        hiddenAtRef.current = now;
+        return;
+      }
+
+      const hiddenAt = hiddenAtRef.current;
+      hiddenAtRef.current = null;
+
+      if (hiddenAt === null) {
+        return;
+      }
+
+      const hiddenDuration = now - hiddenAt;
+
+      if (
+        hiddenDuration <
+        FOREGROUND_REFRESH_MIN_HIDDEN_MS
       ) {
         return;
       }
 
-      void synchronizePlayerState();
-      void synchronizeShopCatalog();
+      if (
+        now -
+          lastPlayerStateSyncAtRef.current >=
+        FOREGROUND_REFRESH_COOLDOWN_MS
+      ) {
+        void synchronizePlayerState();
+      }
+
+      if (
+        now - lastShopSyncAtRef.current >=
+        FOREGROUND_REFRESH_COOLDOWN_MS
+      ) {
+        void synchronizeShopCatalog();
+      }
     }
 
     document.addEventListener(
