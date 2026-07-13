@@ -5,17 +5,22 @@ import {
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
 
-import {
-  CHARMS,
-  DEFAULT_TAP_SKIN_ID,
-  getTapSkinById,
-} from "@/config/shopItems";
-import { useCosmeticsStore } from "@/game/cosmeticsStore";
 import { useGameStore } from "@/game/gameStore";
+import {
+  createPlayerRequestId,
+  getTelegramInitData,
+  PlayerApiError,
+  submitPlayerTap,
+} from "@/lib/playerApi";
+import {
+  fetchPlayerShop,
+  type PlayerShopItem,
+} from "@/lib/playerShopApi";
 
 import styles from "./ClubScreen.module.css";
 
@@ -29,7 +34,6 @@ const particles = [
   { id: 7, className: styles.particleSeven },
   { id: 8, className: styles.particleEight },
 ];
-
 
 const charmPositions = {
   1: { x: 9, y: 42, rotate: -8, size: 42 },
@@ -47,6 +51,81 @@ type CharmPositionStyle = CSSProperties & {
   "--charm-delay": string;
 };
 
+type RewardStyle = CSSProperties & {
+  "--reward-drift": string;
+};
+
+type ShopVisualMetadata = {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  slot: number | null;
+};
+
+function readFiniteNumber(
+  value: unknown,
+  fallback: number,
+): number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+      ? value
+      : fallback
+  );
+}
+
+function readVisualMetadata(
+  metadata: unknown,
+): ShopVisualMetadata {
+  if (
+    typeof metadata !== "object" ||
+    metadata === null ||
+    Array.isArray(metadata)
+  ) {
+    return {
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1,
+      slot: null,
+    };
+  }
+
+  const record = metadata as Record<
+    string,
+    unknown
+  >;
+
+  const slotValue =
+    typeof record.slot === "number" &&
+    Number.isInteger(record.slot)
+      ? record.slot
+      : null;
+
+  return {
+    offsetX: readFiniteNumber(
+      record.offsetX,
+      0,
+    ),
+    offsetY: readFiniteNumber(
+      record.offsetY,
+      0,
+    ),
+    scale: Math.max(
+      0.1,
+      readFiniteNumber(
+        record.scale,
+        1,
+      ),
+    ),
+    slot:
+      slotValue !== null &&
+      slotValue >= 1 &&
+      slotValue <= 8
+        ? slotValue
+        : null,
+  };
+}
+
 type ClubScreenProps = {
   onOpenShop: () => void;
   onOpenLeaderboard: () => void;
@@ -60,16 +139,33 @@ type TapReward = {
   drift: number;
 };
 
-type RewardStyle = CSSProperties & {
-  "--reward-drift": string;
-};
+function parseRewardAmount(
+  value: string,
+): number {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(
+      "Tap API returned an invalid reward amount.",
+    );
+  }
+
+  const amount = Number(value);
+
+  if (
+    !Number.isSafeInteger(amount) ||
+    amount <= 0
+  ) {
+    throw new Error(
+      "Tap reward exceeds the supported client range.",
+    );
+  }
+
+  return amount;
+}
 
 export function ClubScreen({
   onOpenShop,
   onOpenLeaderboard,
 }: ClubScreenProps) {
-  const tap = useGameStore((state) => state.tap);
-
   const energy = useGameStore(
     (state) => state.energy,
   );
@@ -78,38 +174,261 @@ export function ClubScreen({
     (state) => state.energyCostPerTap,
   );
 
-  const equippedTapSkinId =
-    useCosmeticsStore(
-      (state) => state.equippedTapSkinId,
-    );
-
-  const equippedCharmIds =
-    useCosmeticsStore(
-      (state) => state.equippedCharmIds,
-    );
+  const applyServerState = useGameStore(
+    (state) => state.applyServerState,
+  );
 
   const tapAreaRef =
     useRef<HTMLDivElement | null>(null);
 
   const rewardIdRef = useRef(0);
 
+  const pendingTapCountRef = useRef(0);
+
   const [tapRewards, setTapRewards] =
     useState<TapReward[]>([]);
 
+  const [isTapRequestPending, setIsTapRequestPending] =
+    useState(false);
+
+  const [shopItems, setShopItems] =
+    useState<PlayerShopItem[]>([]);
+
   const canTap =
-    energy >= energyCostPerTap;
+    energy >= energyCostPerTap &&
+    !isTapRequestPending;
 
   const equippedTapSkin =
-    getTapSkinById(equippedTapSkinId) ??
-    getTapSkinById(DEFAULT_TAP_SKIN_ID);
+    shopItems.find(
+      (item) =>
+        item.effect === "TAP_SKIN" &&
+        item.player.isEquipped &&
+        Boolean(item.imageUrl),
+    ) ?? null;
 
-  function createTapReward(
+  const equippedCharms =
+    shopItems.filter(
+      (item) =>
+        item.effect === "CHARM" &&
+        item.player.isEquipped &&
+        Boolean(item.imageUrl),
+    );
+
+  useEffect(() => {
+    let isDisposed = false;
+    let activeController:
+      | AbortController
+      | null = null;
+
+    async function synchronizeShop() {
+      activeController?.abort();
+
+      const controller =
+        new AbortController();
+
+      activeController = controller;
+
+      try {
+        const items = await fetchPlayerShop(
+          controller.signal,
+        );
+
+        if (!isDisposed) {
+          setShopItems(items);
+        }
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (error instanceof PlayerApiError) {
+          console.error(
+            "Player shop synchronization failed:",
+            {
+              code: error.code,
+              status: error.status,
+              message: error.message,
+            },
+          );
+
+          return;
+        }
+
+        console.error(
+          "Player shop synchronization failed:",
+          error,
+        );
+      }
+    }
+
+    void synchronizeShop();
+
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        void synchronizeShop();
+      }
+    }
+
+    function handleWindowFocus() {
+      void synchronizeShop();
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+    );
+
+    window.addEventListener(
+      "focus",
+      handleWindowFocus,
+    );
+
+    return () => {
+      isDisposed = true;
+      activeController?.abort();
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleWindowFocus,
+      );
+    };
+  }, []);
+
+  function showTapReward(params: {
+    amount: number;
+    x: number;
+    y: number;
+  }) {
+    rewardIdRef.current += 1;
+
+    const rewardId = rewardIdRef.current;
+
+    const newReward: TapReward = {
+      id: rewardId,
+      amount: params.amount,
+      x: params.x,
+      y: params.y,
+      drift: Math.round(
+        Math.random() * 40 - 20,
+      ),
+    };
+
+    setTapRewards((currentRewards) => [
+      ...currentRewards,
+      newReward,
+    ]);
+
+    window.setTimeout(() => {
+      setTapRewards((currentRewards) =>
+        currentRewards.filter(
+          (reward) =>
+            reward.id !== rewardId,
+        ),
+      );
+    }, 850);
+  }
+
+  async function submitTap(params: {
+    x: number;
+    y: number;
+  }) {
+    const initData = getTelegramInitData();
+
+    if (!initData) {
+      console.error(
+        "Cannot process tap without Telegram initData.",
+      );
+
+      return;
+    }
+
+    const requestId =
+      createPlayerRequestId();
+
+    pendingTapCountRef.current += 1;
+    setIsTapRequestPending(true);
+
+    try {
+      const result =
+        await submitPlayerTap({
+          initData,
+          requestId,
+        });
+
+      const currentRevision =
+        useGameStore.getState()
+          .serverRevision;
+
+      if (
+        result.state.revision >=
+        currentRevision
+      ) {
+        applyServerState(result.state);
+      }
+
+      if (!result.duplicate) {
+        showTapReward({
+          amount: parseRewardAmount(
+            result.earned,
+          ),
+          x: params.x,
+          y: params.y,
+        });
+      }
+    } catch (error) {
+      if (error instanceof PlayerApiError) {
+        if (
+          error.code !==
+            "RATE_LIMIT_EXCEEDED" &&
+          error.code !==
+            "INSUFFICIENT_ENERGY"
+        ) {
+          console.error(
+            "Player tap request failed:",
+            {
+              code: error.code,
+              status: error.status,
+              message: error.message,
+            },
+          );
+        }
+
+        return;
+      }
+
+      console.error(
+        "Failed to send player tap:",
+        error,
+      );
+    } finally {
+      pendingTapCountRef.current =
+        Math.max(
+          0,
+          pendingTapCountRef.current - 1,
+        );
+
+      setIsTapRequestPending(
+        pendingTapCountRef.current > 0,
+      );
+    }
+  }
+
+  function processTap(
     clientX?: number,
     clientY?: number,
   ) {
-    const result = tap();
-
-    if (!result.success) {
+    if (!canTap) {
       return;
     }
 
@@ -132,39 +451,16 @@ export function ClubScreen({
         ? clientY - areaRect.top
         : areaRect.height / 2;
 
-    rewardIdRef.current += 1;
-
-    const rewardId = rewardIdRef.current;
-
-    const newReward: TapReward = {
-      id: rewardId,
-      amount: result.earned,
+    void submitTap({
       x,
       y,
-      drift: Math.round(
-        Math.random() * 40 - 20,
-      ),
-    };
-
-    setTapRewards((currentRewards) => [
-      ...currentRewards,
-      newReward,
-    ]);
-
-    window.setTimeout(() => {
-      setTapRewards((currentRewards) =>
-        currentRewards.filter(
-          (reward) =>
-            reward.id !== rewardId,
-        ),
-      );
-    }, 850);
+    });
   }
 
   function handlePointerDown(
     event: PointerEvent<HTMLButtonElement>,
   ) {
-    createTapReward(
+    processTap(
       event.clientX,
       event.clientY,
     );
@@ -177,7 +473,7 @@ export function ClubScreen({
       return;
     }
 
-    createTapReward();
+    processTap();
   }
 
   return (
@@ -244,53 +540,57 @@ export function ClubScreen({
         </div>
 
         <div className={styles.charmsLayer}>
-          {CHARMS.map((charm) => {
-            if (
-              !equippedCharmIds.includes(
-                charm.id,
-              )
-            ) {
-              return null;
-            }
+          {equippedCharms.map(
+            (charm, index) => {
+              if (!charm.imageUrl) {
+                return null;
+              }
 
-            const position =
-              charmPositions[
-                charm.slot as keyof typeof charmPositions
-              ];
+              const metadata =
+                readVisualMetadata(
+                  charm.metadata,
+                );
 
-            if (!position) {
-              return null;
-            }
+              const slot =
+                metadata.slot ??
+                ((index % 8) + 1);
 
-            const charmStyle: CharmPositionStyle = {
-              left: `${position.x}%`,
-              top: `${position.y}%`,
-              width: `${position.size}px`,
-              height: `${position.size}px`,
-              "--charm-rotate": `${position.rotate}deg`,
-              "--charm-delay": `${
-                (charm.slot - 1) * -0.35
-              }s`,
-            };
+              const position =
+                charmPositions[
+                  slot as keyof typeof charmPositions
+                ];
 
-            return (
-              <div
-                key={charm.id}
-                className={styles.charmPosition}
-                style={charmStyle}
-              >
-                <div className={styles.charmFloat}>
-                  <Image
-                    src={charm.image}
-                    alt=""
-                    width={position.size}
-                    height={position.size}
-                    className={styles.charmImage}
-                  />
+              const charmStyle: CharmPositionStyle = {
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+                width: `${position.size}px`,
+                height: `${position.size}px`,
+                "--charm-rotate": `${position.rotate}deg`,
+                "--charm-delay": `${
+                  (slot - 1) * -0.35
+                }s`,
+              };
+
+              return (
+                <div
+                  key={charm.id}
+                  className={styles.charmPosition}
+                  style={charmStyle}
+                >
+                  <div className={styles.charmFloat}>
+                    <Image
+                      src={charm.imageUrl}
+                      alt=""
+                      width={position.size}
+                      height={position.size}
+                      className={styles.charmImage}
+                      unoptimized
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            },
+          )}
         </div>
 
         <div className={styles.tapDecor}>
@@ -365,26 +665,38 @@ export function ClubScreen({
             onClick={handleKeyboardClick}
             disabled={!canTap}
           >
-            {equippedTapSkin && (
-             <Image
-  src={equippedTapSkin.image}
-  alt=""
-  fill
-  priority
-  sizes="(max-width: 360px) 220px, 260px"
-  className={styles.tapSkinImage}
-  style={{
-    transform: `translate(${equippedTapSkin.offsetX}px, ${equippedTapSkin.offsetY}px) scale(${equippedTapSkin.scale})`,
-  }}
-/>
-            )}
+            {equippedTapSkin?.imageUrl && (() => {
+              const metadata =
+                readVisualMetadata(
+                  equippedTapSkin.metadata,
+                );
+
+              return (
+                <Image
+                  src={equippedTapSkin.imageUrl}
+                  alt=""
+                  fill
+                  priority
+                  sizes="(max-width: 360px) 220px, 260px"
+                  className={
+                    styles.tapSkinImage
+                  }
+                  style={{
+                    transform: `translate(${metadata.offsetX}px, ${metadata.offsetY}px) scale(${metadata.scale})`,
+                  }}
+                  unoptimized
+                />
+              );
+            })()}
           </button>
         </div>
 
         <span className={styles.tapHint}>
-          {canTap
-            ? "Tap to earn"
-            : "Not enough energy"}
+          {energy < energyCostPerTap
+            ? "Not enough energy"
+            : isTapRequestPending
+              ? "Processing..."
+              : "Tap to earn"}
         </span>
       </div>
     </section>

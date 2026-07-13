@@ -1,50 +1,36 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import {
-  TelegramAuthError,
-  validateTelegramInitData,
-} from "@/lib/telegramAuth";
+  authenticateTelegramUser,
+  isTelegramAuthError,
+} from "@/lib/authenticateTelegramUser";
 
 export const runtime = "nodejs";
 
-type SavedUser = {
-  id: string;
-  telegramId: bigint;
-  username: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  photoUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  lastLoginAt: Date;
+type TelegramAuthRequestBody = {
+  initData?: unknown;
 };
 
-type UserDelegate = {
-  upsert(args: {
-    where: { telegramId: bigint };
-    create: {
-      telegramId: bigint;
-      username: string | null;
-      firstName: string | null;
-      lastName: string | null;
-      photoUrl: string | null;
-      lastLoginAt: Date;
-    };
-    update: {
-      username: string | null;
-      firstName: string | null;
-      lastName: string | null;
-      photoUrl: string | null;
-      lastLoginAt: Date;
-    };
-    select: Record<keyof SavedUser, true>;
-  }): Promise<SavedUser>;
-};
+function getInitData(body: unknown): string | null {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("initData" in body)
+  ) {
+    return null;
+  }
 
-function normalizeOptionalText(value: string | undefined): string | null {
-  const normalizedValue = value?.trim();
-  return normalizedValue ? normalizedValue : null;
+  const { initData } = body as TelegramAuthRequestBody;
+
+  if (typeof initData !== "string") {
+    return null;
+  }
+
+  const normalizedInitData = initData.trim();
+
+  return normalizedInitData.length > 0
+    ? normalizedInitData
+    : null;
 }
 
 export async function POST(request: Request) {
@@ -54,85 +40,71 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body." },
-      { status: 400 },
+      {
+        ok: false,
+        error: "Invalid JSON body.",
+      },
+      {
+        status: 400,
+      },
     );
   }
 
-  const initData =
-    typeof body === "object" &&
-    body !== null &&
-    "initData" in body &&
-    typeof body.initData === "string"
-      ? body.initData
-      : "";
+  const initData = getInitData(body);
+
+  if (!initData) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Telegram initData is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
 
   try {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
-    if (!botToken) {
-      console.error("TELEGRAM_BOT_TOKEN is not configured.");
-      return NextResponse.json(
-        { ok: false, error: "Server authentication is not configured." },
-        { status: 500 },
-      );
-    }
-
-    const { user } = validateTelegramInitData(initData, botToken);
-    const now = new Date();
-
-    const userDelegate = (prisma as unknown as { user: UserDelegate }).user;
-    const savedUser = await userDelegate.upsert({
-      where: {
-        telegramId: BigInt(user.id),
-      },
-      create: {
-        telegramId: BigInt(user.id),
-        username: normalizeOptionalText(user.username),
-        firstName: normalizeOptionalText(user.first_name),
-        lastName: normalizeOptionalText(user.last_name),
-        photoUrl: normalizeOptionalText(user.photo_url),
-        lastLoginAt: now,
-      },
-      update: {
-        username: normalizeOptionalText(user.username),
-        firstName: normalizeOptionalText(user.first_name),
-        lastName: normalizeOptionalText(user.last_name),
-        photoUrl: normalizeOptionalText(user.photo_url),
-        lastLoginAt: now,
-      },
-      select: {
-        id: true,
-        telegramId: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        photoUrl: true,
-        createdAt: true,
-        updatedAt: true,
-        lastLoginAt: true,
-      },
-    });
+    const { user } =
+      await authenticateTelegramUser(initData);
 
     return NextResponse.json({
       ok: true,
       user: {
-        ...savedUser,
-        telegramId: savedUser.telegramId.toString(),
+        id: user.id,
+        telegramId: user.telegramId.toString(),
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        photoUrl: user.photoUrl,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+        lastLoginAt: user.lastLoginAt.toISOString(),
       },
     });
   } catch (error) {
-    if (error instanceof TelegramAuthError) {
+    if (isTelegramAuthError(error)) {
       return NextResponse.json(
-        { ok: false, error: "Invalid Telegram authorization data." },
-        { status: 401 },
+        {
+          ok: false,
+          error: "Invalid Telegram authorization data.",
+        },
+        {
+          status: 401,
+        },
       );
     }
 
     console.error("Telegram authentication failed:", error);
+
     return NextResponse.json(
-      { ok: false, error: "Telegram authentication failed." },
-      { status: 500 },
+      {
+        ok: false,
+        error: "Telegram authentication failed.",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }
