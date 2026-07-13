@@ -50,10 +50,15 @@ function calculateEnergySync(params: {
     restoreIntervalSeconds,
   } = params;
 
+  /*
+   * A player at maximum energy requires no database write.
+   * Keeping the existing timestamp prevents every state read
+   * from incrementing revision and touching updatedAt.
+   */
   if (energy >= maxEnergy) {
     return {
       energy: maxEnergy,
-      lastEnergyUpdate: now,
+      lastEnergyUpdate,
       restoredEnergy: BigInt(0),
       elapsedIntervals: BigInt(0),
     };
@@ -146,6 +151,7 @@ async function getEconomySettings() {
 export async function syncPlayerEnergy(
   userId: string,
   now = new Date(),
+  initialState?: PlayerGameStateRecord,
 ): Promise<EnergySyncResult> {
   const economy = await getEconomySettings();
 
@@ -157,17 +163,25 @@ export async function syncPlayerEnergy(
 
   assertValidEnergySettings(economy);
 
+  let stateForAttempt =
+    initialState?.userId === userId
+      ? initialState
+      : null;
+
   for (
     let attempt = 1;
     attempt <= MAX_SYNC_RETRIES;
     attempt += 1
   ) {
     const state =
-      await prisma.playerGameState.findUnique({
+      stateForAttempt ??
+      (await prisma.playerGameState.findUnique({
         where: {
           userId,
         },
-      });
+      }));
+
+    stateForAttempt = null;
 
     if (!state) {
       throw new Error(

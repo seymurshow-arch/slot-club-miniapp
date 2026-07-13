@@ -88,7 +88,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const energySync = await syncPlayerEnergy(user.id);
+    /*
+     * Reuse the state that was already loaded by
+     * getOrCreatePlayerGameState. The energy service will only
+     * re-read it if an optimistic-lock conflict occurs.
+     */
+    const energySync = await syncPlayerEnergy(
+      user.id,
+      new Date(),
+      initialState,
+    );
     const state = energySync.state;
 
     if (state.isBlocked) {
