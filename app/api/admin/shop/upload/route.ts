@@ -224,15 +224,25 @@ export async function POST(
     const pathname =
       `shop/items/${safeBaseName}.${allowedType.extension}`;
 
-    const blob = await put(
-      pathname,
-      fileBuffer,
-      {
-        access: "public",
-        addRandomSuffix: true,
-        contentType: uploadedValue.type,
-      },
-    );
+    const blobStoreId =
+  process.env.slot_STORE_ID?.trim();
+
+if (!blobStoreId) {
+  throw new Error(
+    "slot_STORE_ID is not configured.",
+  );
+}
+
+const blob = await put(
+  pathname,
+  fileBuffer,
+  {
+    access: "public",
+    storeId: blobStoreId,
+    addRandomSuffix: true,
+    contentType: uploadedValue.type,
+  },
+);
 
     const {
       ipAddress,
