@@ -2,46 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { deleteAdminShopItem, type AdminShopItem } from "@/lib/playerShopApi";
 import type { ShopCategory } from "./shopTypes";
 
 import styles from "../../AdminPanel.module.css";
 
 type ShopCatalogViewProps = {
   onCreateItem: () => void;
+  onEditItem: (item: AdminShopItem) => void;
 };
 
-type ApiShopItem = {
-  id: string;
-  key: string;
-  title: string;
-  description: string | null;
-  type: string;
-  category: string;
-  effect: string;
-  acquisitionMethod: string;
-  purchaseLimit: string;
-  imageUrl: string | null;
-  basePrice: string;
-  priceGrowthNumerator: string;
-  priceGrowthDenominator: string;
-  maxLevel: number | null;
-  maximumPurchases: number | null;
-  minimumVipLevel: number;
-  minimumPlayerLevel: number;
-  cosmeticId: string | null;
-  startsAt: string | null;
-  endsAt: string | null;
-  sortOrder: number;
-  isActive: boolean;
-  isVisible: boolean;
-  isFeatured: boolean;
-  createdAt: string;
-  updatedAt: string;
-  _count?: {
-    purchases: number;
-    playerItems: number;
-  };
-};
+type ApiShopItem = AdminShopItem;
 
 type ShopStats = {
   totalItems: number;
@@ -144,7 +115,7 @@ function getStatusLabel(status: ReturnType<typeof getItemStatus>): string {
   return "Scheduled";
 }
 
-export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
+export function ShopCatalogView({ onCreateItem, onEditItem }: ShopCatalogViewProps) {
   const [category, setCategory] = useState<"all" | ShopCategory>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
@@ -152,6 +123,7 @@ export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -195,7 +167,8 @@ export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
 
     void loadCatalog();
 
-    return () => controller.abort();
+  
+  return () => controller.abort();
   }, []);
 
   const filteredItems = useMemo(() => {
@@ -228,6 +201,44 @@ export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
   }, [category, items, search, status]);
+
+  async function handleDelete(item: AdminShopItem): Promise<void> {
+    if (deletingItemId) return;
+
+    const confirmed = window.confirm(
+      `Delete "${item.title}"? The item will disappear from the player shop, while purchase history remains intact.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingItemId(item.id);
+    setError("");
+
+    try {
+      await deleteAdminShopItem(item.id);
+      setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
+      setStats((current) =>
+        current
+          ? {
+              ...current,
+              totalItems: Math.max(0, current.totalItems - 1),
+              activeItems: Math.max(0, current.activeItems - (item.isActive ? 1 : 0)),
+              visibleItems: Math.max(0, current.visibleItems - (item.isVisible ? 1 : 0)),
+              disabledItems: Math.max(0, current.disabledItems - (!item.isActive ? 1 : 0)),
+              hiddenItems: Math.max(0, current.hiddenItems - (!item.isVisible ? 1 : 0)),
+            }
+          : current,
+      );
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Не вдалося видалити товар.",
+      );
+    } finally {
+      setDeletingItemId(null);
+    }
+  }
 
   return (
     <section className={styles.shopCatalogView}>
@@ -359,7 +370,7 @@ export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
             >
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  {["Item", "Category", "Effect", "Price", "Access", "Limits", "Players", "Purchases", "Status", "Updated"].map(
+                  {["Item", "Category", "Effect", "Price", "Access", "Limits", "Players", "Purchases", "Status", "Updated", "Actions"].map(
                     (label) => (
                       <th
                         key={label}
@@ -467,6 +478,26 @@ export function ShopCatalogView({ onCreateItem }: ShopCatalogViewProps) {
                       </td>
                       <td style={{ padding: "13px 14px", color: "#737983", whiteSpace: "nowrap" }}>
                         {formatDate(item.updatedAt)}
+                      </td>
+                      <td style={{ padding: "13px 14px", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => onEditItem(item)}
+                            disabled={deletingItemId !== null}
+                            style={{ padding: "7px 10px", borderRadius: 8 }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(item)}
+                            disabled={deletingItemId !== null}
+                            style={{ padding: "7px 10px", borderRadius: 8 }}
+                          >
+                            {deletingItemId === item.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

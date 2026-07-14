@@ -284,6 +284,12 @@ export type CreateAdminShopItemInput = {
   metadata?: Record<string, unknown>;
 };
 
+
+export type UpdateAdminShopItemInput =
+  CreateAdminShopItemInput & {
+    id: string;
+  };
+
 export type UploadedShopImage = {
   url: string;
   downloadUrl: string;
@@ -381,6 +387,12 @@ type UploadShopImageResponse = {
 type CreateAdminShopItemResponse = {
   ok: true;
   item: AdminShopItem;
+};
+
+type DeleteAdminShopItemResponse = {
+  ok: true;
+  id: string;
+  deletedAt: string;
 };
 
 type AdminShopCatalogResponse = {
@@ -1348,4 +1360,61 @@ export async function fetchAdminShopCatalog(
     stats: body.stats,
     items: body.items,
   };
+}
+
+export async function updateAdminShopItem(
+  input: UpdateAdminShopItemInput,
+  signal?: AbortSignal,
+): Promise<AdminShopItem> {
+  let response: Response;
+
+  try {
+    response = await fetch("/api/admin/shop", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+
+    throw new AdminShopApiError("Could not reach the admin shop API.", 0);
+  }
+
+  const body = await readAdminResponseJson<CreateAdminShopItemResponse>(response);
+  return body.item;
+}
+
+export async function deleteAdminShopItem(
+  id: string,
+  signal?: AbortSignal,
+): Promise<DeleteAdminShopItemResponse> {
+  const normalizedId = id.trim();
+  if (!normalizedId) {
+    throw new AdminShopApiError("Shop item ID is required.", 400);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch("/api/admin/shop", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+      body: JSON.stringify({ id: normalizedId }),
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+
+    throw new AdminShopApiError("Could not reach the admin shop API.", 0);
+  }
+
+  return readAdminResponseJson<DeleteAdminShopItemResponse>(response);
 }

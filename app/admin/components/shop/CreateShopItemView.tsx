@@ -10,10 +10,12 @@ import {
 
 import {
   createAdminShopItem,
+  updateAdminShopItem,
   uploadAdminShopImage,
 } from "@/lib/playerShopApi";
 
 import type {
+  AdminShopItem,
   CreateAdminShopItemInput,
 } from "@/lib/playerShopApi";
 
@@ -118,33 +120,117 @@ const verificationLabels: Record<
   "no-verification": "No Verification",
 };
 
+function toDateTimeLocal(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function readMetadataNumber(item: AdminShopItem | null, key: string, fallback: number): string {
+  if (!item || typeof item.metadata !== "object" || item.metadata === null || Array.isArray(item.metadata)) {
+    return String(fallback);
+  }
+  const value = (item.metadata as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isFinite(value) ? String(value) : String(fallback);
+}
+
+function mapItemType(item: AdminShopItem): ShopItemType {
+  const effectMap: Record<string, ShopItemType> = {
+    TAP_POWER: "tap-power", MAX_ENERGY: "max-energy",
+    ENERGY_RESTORE_AMOUNT: "energy-recovery", FULL_ENERGY: "energy-refill",
+    TAP_SKIN: "tap-skin", AVATAR_FRAME: "avatar-frame", CHARM: "charm",
+    VIP_POINTS: "vip-points", COINS: "coins-pack", SPECIAL_ITEM: "special-item",
+  };
+  return effectMap[item.effect] ?? "special-item";
+}
+
+function mapCategory(value: string): ShopCategory {
+  const map: Record<string, ShopCategory> = {
+    BOOSTS: "boosts", ENERGY: "energy", TAP_SKINS: "tap-skins",
+    AVATAR_FRAMES: "avatar-frames", CHARMS: "charms", SPECIAL: "special",
+  };
+  return map[value] ?? "special";
+}
+
+function mapAcquisition(value: string): AcquisitionMethod {
+  const map: Record<string, AcquisitionMethod> = {
+    PURCHASE: "purchase", ACTION: "action", PURCHASE_OR_ACTION: "purchase-or-action", FREE: "free",
+  };
+  return map[value] ?? "purchase";
+}
+
+function mapPurchaseLimit(value: string): PurchaseLimit {
+  const map: Record<string, PurchaseLimit> = { ONCE: "once", LIMITED: "limited", UNLIMITED: "unlimited" };
+  return map[value] ?? "unlimited";
+}
+
+function mapUnlockAction(value: string | null): UnlockActionType {
+  const map: Record<string, UnlockActionType> = {
+    TELEGRAM_CHANNEL: "telegram-channel", OPEN_LINK: "open-link", CUSTOM: "custom",
+    TAP_COUNT: "tap-count", REFERRALS: "referrals", VIP_LEVEL: "vip-level", MANUAL: "manual",
+  };
+  return value ? map[value] ?? "manual" : "telegram-channel";
+}
+
+function mapUnlockVerification(value: string | null): UnlockVerification {
+  const map: Record<string, UnlockVerification> = {
+    TELEGRAM_API: "telegram-api", GAME_LOGIC: "game-logic", MANUAL_REVIEW: "manual-review",
+    AUTO_COMPLETE: "auto-complete", NO_VERIFICATION: "no-verification",
+  };
+  return value ? map[value] ?? "no-verification" : "telegram-api";
+}
+
+function createFormState(item: AdminShopItem | null): ShopItemFormState {
+  if (!item) return initialForm;
+  return {
+    title: item.title, description: item.description ?? "", category: mapCategory(item.category),
+    itemType: mapItemType(item), acquisitionMethod: mapAcquisition(item.acquisitionMethod),
+    price: item.basePrice, purchaseLimit: mapPurchaseLimit(item.purchaseLimit),
+    maximumPurchases: item.maximumPurchases?.toString() ?? "",
+    minimumVipLevel: item.minimumVipLevel.toString(), effectValue: item.effectValue,
+    priceGrowthMultiplier: String(Number(item.priceGrowthNumerator) / Number(item.priceGrowthDenominator)),
+    maximumLevel: item.maxLevel?.toString() ?? "", cosmeticId: item.cosmeticId ?? "",
+    itemAmount: item.itemAmount, unlockActionType: mapUnlockAction(item.unlockActionType),
+    unlockVerification: mapUnlockVerification(item.unlockVerification),
+    unlockInstructions: item.unlockInstructions ?? "", actionUrl: item.actionUrl ?? "",
+    telegramChannelUsername: item.telegramChannelUsername ?? "", telegramChatId: item.telegramChatId ?? "",
+    targetValue: item.targetValue ?? "", startDate: toDateTimeLocal(item.startsAt),
+    endDate: toDateTimeLocal(item.endsAt), isActive: item.isActive, imagePreview: item.imageUrl,
+  };
+}
+
 type CreateShopItemViewProps = {
+  item?: AdminShopItem | null;
   onBackToCatalog: () => void;
 };
 
 export function CreateShopItemView({
+  item = null,
   onBackToCatalog,
 }: CreateShopItemViewProps) {
+  const isEditing = item !== null;
   const [form, setForm] =
-    useState<ShopItemFormState>(initialForm);
+    useState<ShopItemFormState>(() => createFormState(item));
 
   const [imageFile, setImageFile] =
     useState<File | null>(null);
 
   const [minimumPlayerLevel, setMinimumPlayerLevel] =
-    useState("0");
+    useState(item?.minimumPlayerLevel.toString() ?? "0");
 
   const [isVisible, setIsVisible] =
-    useState(true);
+    useState(item?.isVisible ?? true);
 
   const [cosmeticOffsetX, setCosmeticOffsetX] =
-    useState("0");
+    useState(readMetadataNumber(item, "offsetX", 0));
 
   const [cosmeticOffsetY, setCosmeticOffsetY] =
-    useState("0");
+    useState(readMetadataNumber(item, "offsetY", 0));
 
   const [cosmeticScale, setCosmeticScale] =
-    useState("1");
+    useState(readMetadataNumber(item, "scale", 1));
 
   const [isSubmitting, setIsSubmitting] =
     useState(false);
@@ -218,12 +304,12 @@ export function CreateShopItemView({
       URL.revokeObjectURL(form.imagePreview);
     }
 
-    setForm(initialForm);
-    setMinimumPlayerLevel("0");
-    setIsVisible(true);
-    setCosmeticOffsetX("0");
-    setCosmeticOffsetY("0");
-    setCosmeticScale("1");
+    setForm(createFormState(item));
+    setMinimumPlayerLevel(item?.minimumPlayerLevel.toString() ?? "0");
+    setIsVisible(item?.isVisible ?? true);
+    setCosmeticOffsetX(readMetadataNumber(item, "offsetX", 0));
+    setCosmeticOffsetY(readMetadataNumber(item, "offsetY", 0));
+    setCosmeticScale(readMetadataNumber(item, "scale", 1));
     setImageFile(null);
     setSubmitError(null);
     setSubmitMessage(null);
@@ -432,7 +518,10 @@ export function CreateShopItemView({
     setIsSubmitting(true);
 
     try {
-      let imageUrl: string | undefined;
+      let imageUrl: string | undefined =
+        form.imagePreview && !form.imagePreview.startsWith("blob:")
+          ? form.imagePreview
+          : undefined;
 
       if (imageFile) {
         setSubmitMessage("Завантаження картинки...");
@@ -552,7 +641,11 @@ export function CreateShopItemView({
           : undefined,
       };
 
-      await createAdminShopItem(input);
+      if (item) {
+        await updateAdminShopItem({ id: item.id, key: item.key, ...input });
+      } else {
+        await createAdminShopItem(input);
+      }
 
       resetForm();
       onBackToCatalog();
@@ -562,7 +655,9 @@ export function CreateShopItemView({
       setSubmitError(
         error instanceof Error
           ? error.message
-          : "Не вдалося створити товар.",
+          : isEditing
+            ? "Не вдалося оновити товар."
+            : "Не вдалося створити товар.",
       );
     } finally {
       setIsSubmitting(false);
@@ -579,11 +674,12 @@ export function CreateShopItemView({
       <section className={styles.shopItemBuilder}>
         <header className={styles.shopItemBuilderHeader}>
           <div>
-            <h2>Create Shop Item</h2>
+            <h2>{isEditing ? "Edit Shop Item" : "Create Shop Item"}</h2>
 
             <p>
-              Налаштуйте товар, ціну, ефект і спосіб
-              отримання
+              {isEditing
+                ? "Оновіть товар, ціну, ефект і спосіб отримання"
+                : "Налаштуйте товар, ціну, ефект і спосіб отримання"}
             </p>
           </div>
 
@@ -1475,7 +1571,9 @@ export function CreateShopItemView({
             >
               {isSubmitting
                 ? "Saving..."
-                : "Save draft"}
+                : isEditing
+                  ? "Save disabled"
+                  : "Save draft"}
             </button>
 
             <button
@@ -1484,8 +1582,12 @@ export function CreateShopItemView({
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? "Publishing..."
-                : "Publish item"}
+                ? isEditing
+                  ? "Saving..."
+                  : "Publishing..."
+                : isEditing
+                  ? "Save changes"
+                  : "Publish item"}
             </button>
           </div>
         </footer>

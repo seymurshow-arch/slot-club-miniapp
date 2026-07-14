@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import type { AdminShopItem } from "@/lib/playerShopApi";
+
 import { CreateShopItemView } from "./CreateShopItemView";
 import { PurchaseHistoryView } from "./PurchaseHistoryView";
 import { ShopCatalogView } from "./ShopCatalogView";
@@ -13,6 +15,24 @@ import styles from "../../AdminPanel.module.css";
 export function ShopSection() {
   const [activeView, setActiveView] =
     useState<ShopView>("catalog");
+
+  const [editingItem, setEditingItem] =
+    useState<AdminShopItem | null>(null);
+
+  function openCatalog(): void {
+    setEditingItem(null);
+    setActiveView("catalog");
+  }
+
+  function openCreate(): void {
+    setEditingItem(null);
+    setActiveView("create");
+  }
+
+  function openEdit(item: AdminShopItem): void {
+    setEditingItem(item);
+    setActiveView("create");
+  }
 
   return (
     <section className={styles.shopSection}>
@@ -34,9 +54,7 @@ export function ShopSection() {
                 ? styles.shopViewTabActive
                 : styles.shopViewTab
             }
-            onClick={() =>
-              setActiveView("catalog")
-            }
+            onClick={openCatalog}
           >
             <span>◇</span>
             Catalog
@@ -49,12 +67,10 @@ export function ShopSection() {
                 ? styles.shopViewTabActive
                 : styles.shopViewTab
             }
-            onClick={() =>
-              setActiveView("create")
-            }
+            onClick={openCreate}
           >
-            <span>+</span>
-            Create Item
+            <span>{editingItem ? "✎" : "+"}</span>
+            {editingItem ? "Edit Item" : "Create Item"}
           </button>
 
           <button
@@ -64,9 +80,10 @@ export function ShopSection() {
                 ? styles.shopViewTabActive
                 : styles.shopViewTab
             }
-            onClick={() =>
-              setActiveView("history")
-            }
+            onClick={() => {
+              setEditingItem(null);
+              setActiveView("history");
+            }}
           >
             <span>≡</span>
             Purchase History
@@ -76,17 +93,15 @@ export function ShopSection() {
 
       {activeView === "catalog" && (
         <ShopCatalogView
-          onCreateItem={() =>
-            setActiveView("create")
-          }
+          onCreateItem={openCreate}
+          onEditItem={openEdit}
         />
       )}
 
       {activeView === "create" && (
         <CreateShopItemView
-          onBackToCatalog={() =>
-            setActiveView("catalog")
-          }
+          item={editingItem}
+          onBackToCatalog={openCatalog}
         />
       )}
 

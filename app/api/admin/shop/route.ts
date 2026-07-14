@@ -31,6 +31,7 @@ const MAX_BIGINT = 9_223_372_036_854_775_807n;
 type JsonRecord = Prisma.InputJsonObject;
 
 type CreateShopItemBody = {
+  id?: unknown;
   key?: unknown;
   title?: unknown;
   description?: unknown;
@@ -955,7 +956,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function saveShopItem(request: Request, mode: "create" | "update") {
   if (!(await requireAdminSession())) {
     return NextResponse.json(
       {
@@ -986,6 +987,24 @@ export async function POST(request: Request) {
   }
 
   try {
+    const itemId =
+      mode === "update"
+        ? normalizeRequiredString(body.id, "id", 191)
+        : null;
+
+    const existingItem = itemId
+      ? await prisma.shopItem.findFirst({
+          where: { id: itemId, deletedAt: null },
+        })
+      : null;
+
+    if (mode === "update" && !existingItem) {
+      return NextResponse.json(
+        { ok: false, error: "Shop item not found." },
+        { status: 404 },
+      );
+    }
+
     const title = normalizeRequiredString(
       body.title,
       "title",
@@ -1323,6 +1342,7 @@ export async function POST(request: Request) {
     const duplicate = await prisma.shopItem.findFirst(
       {
         where: {
+          ...(itemId ? { NOT: { id: itemId } } : {}),
           OR: [
             {
               key,
@@ -1355,120 +1375,66 @@ export async function POST(request: Request) {
       );
     }
 
-    const item = await prisma.$transaction(
-      async (transaction) => {
-        const createdItem =
-          await transaction.shopItem.create({
-            data: {
-              key,
+    const itemData = {
+      key, title, description, type, category, effect, acquisitionMethod,
+      purchaseLimit, imageUrl, basePrice, priceGrowthNumerator,
+      priceGrowthDenominator, effectValue, itemAmount, maxLevel,
+      maximumPurchases: normalizedMaximumPurchases, minimumVipLevel,
+      minimumPlayerLevel, cosmeticId,
+      unlockActionType: hasAction ? unlockActionType : null,
+      unlockVerification: hasAction ? unlockVerification : null,
+      unlockInstructions: hasAction ? unlockInstructions : null,
+      actionUrl: hasAction ? actionUrl : null,
+      telegramChannelUsername: hasAction ? telegramChannelUsername : null,
+      telegramChatId: hasAction ? telegramChatId : null,
+      targetValue: hasAction ? targetValue : null,
+      startsAt, endsAt, sortOrder, isActive, isVisible, isFeatured,
+      requirements, metadata,
+    };
 
-              title,
-              description,
+    const item = await prisma.$transaction(async (transaction) => {
+      const beforeState = existingItem
+        ? {
+            id: existingItem.id, key: existingItem.key, title: existingItem.title,
+            type: existingItem.type, category: existingItem.category,
+            effect: existingItem.effect, acquisitionMethod: existingItem.acquisitionMethod,
+            purchaseLimit: existingItem.purchaseLimit,
+            basePrice: existingItem.basePrice.toString(),
+            isActive: existingItem.isActive, isVisible: existingItem.isVisible,
+          }
+        : undefined;
 
-              type,
-              category,
-              effect,
-              acquisitionMethod,
-              purchaseLimit,
-
-              imageUrl,
-
-              basePrice,
-              priceGrowthNumerator,
-              priceGrowthDenominator,
-
-              effectValue,
-              itemAmount,
-
-              maxLevel,
-              maximumPurchases:
-                normalizedMaximumPurchases,
-
-              minimumVipLevel,
-              minimumPlayerLevel,
-
-              cosmeticId,
-
-              unlockActionType: hasAction
-                ? unlockActionType
-                : null,
-
-              unlockVerification: hasAction
-                ? unlockVerification
-                : null,
-
-              unlockInstructions: hasAction
-                ? unlockInstructions
-                : null,
-
-              actionUrl: hasAction
-                ? actionUrl
-                : null,
-
-              telegramChannelUsername: hasAction
-                ? telegramChannelUsername
-                : null,
-
-              telegramChatId: hasAction
-                ? telegramChatId
-                : null,
-
-              targetValue: hasAction
-                ? targetValue
-                : null,
-
-              startsAt,
-              endsAt,
-
-              sortOrder,
-
-              isActive,
-              isVisible,
-              isFeatured,
-
-              requirements,
-              metadata,
-            },
-
-            include: {
-              _count: {
-                select: {
-                  purchases: true,
-                  playerItems: true,
-                },
-              },
-            },
+      const savedItem = itemId
+        ? await transaction.shopItem.update({
+            where: { id: itemId },
+            data: itemData,
+            include: { _count: { select: { purchases: true, playerItems: true } } },
+          })
+        : await transaction.shopItem.create({
+            data: itemData,
+            include: { _count: { select: { purchases: true, playerItems: true } } },
           });
 
-        await transaction.adminAuditLog.create({
-          data: {
-            actor: "browser-admin",
-            action: "SHOP_ITEM_CREATE",
-            entityType: "ShopItem",
-            entityId: createdItem.id,
-
-            afterState: {
-              id: createdItem.id,
-              key: createdItem.key,
-              title: createdItem.title,
-              type: createdItem.type,
-              category: createdItem.category,
-              effect: createdItem.effect,
-              acquisitionMethod:
-                createdItem.acquisitionMethod,
-              purchaseLimit:
-                createdItem.purchaseLimit,
-              basePrice:
-                createdItem.basePrice.toString(),
-              isActive: createdItem.isActive,
-              isVisible: createdItem.isVisible,
-            },
+      await transaction.adminAuditLog.create({
+        data: {
+          actor: "browser-admin",
+          action: itemId ? "SHOP_ITEM_UPDATE" : "SHOP_ITEM_CREATE",
+          entityType: "ShopItem",
+          entityId: savedItem.id,
+          ...(beforeState ? { beforeState } : {}),
+          afterState: {
+            id: savedItem.id, key: savedItem.key, title: savedItem.title,
+            type: savedItem.type, category: savedItem.category, effect: savedItem.effect,
+            acquisitionMethod: savedItem.acquisitionMethod,
+            purchaseLimit: savedItem.purchaseLimit,
+            basePrice: savedItem.basePrice.toString(),
+            isActive: savedItem.isActive, isVisible: savedItem.isVisible,
           },
-        });
+        },
+      });
 
-        return createdItem;
-      },
-    );
+      return savedItem;
+    });
 
     return NextResponse.json(
       {
@@ -1476,7 +1442,7 @@ export async function POST(request: Request) {
         item: serializeShopItem(item),
       },
       {
-        status: 201,
+        status: mode === "create" ? 201 : 200,
       },
     );
   } catch (error) {
@@ -1493,18 +1459,104 @@ export async function POST(request: Request) {
     }
 
     console.error(
-      "Failed to create shop item:",
+      mode === "create"
+        ? "Failed to create shop item:"
+        : "Failed to update shop item:",
       error,
     );
 
     return NextResponse.json(
       {
         ok: false,
-        error: "Failed to create shop item.",
+        error: mode === "create"
+          ? "Failed to create shop item."
+          : "Failed to update shop item.",
       },
       {
         status: 500,
       },
     );
+  }
+}
+
+export async function POST(request: Request) {
+  return saveShopItem(request, "create");
+}
+
+export async function PUT(request: Request) {
+  return saveShopItem(request, "update");
+}
+
+export async function DELETE(request: Request) {
+  if (!(await requireAdminSession())) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  let body: { id?: unknown };
+  try {
+    body = (await request.json()) as { id?: unknown };
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  try {
+    const id = normalizeRequiredString(body.id, "id", 191);
+    const existingItem = await prisma.shopItem.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!existingItem) {
+      return NextResponse.json({ ok: false, error: "Shop item not found." }, { status: 404 });
+    }
+
+    const deletedAt = new Date();
+    await prisma.$transaction(async (transaction) => {
+      await transaction.playerShopItem.updateMany({
+        where: { shopItemId: id, isEquipped: true },
+        data: { isEquipped: false, equippedAt: null },
+      });
+
+      await transaction.shopItem.update({
+        where: { id },
+        data: {
+          deletedAt,
+          isActive: false,
+          isVisible: false,
+          isFeatured: false,
+        },
+      });
+
+      await transaction.adminAuditLog.create({
+        data: {
+          actor: "browser-admin",
+          action: "SHOP_ITEM_DELETE",
+          entityType: "ShopItem",
+          entityId: id,
+          beforeState: {
+            id: existingItem.id,
+            key: existingItem.key,
+            title: existingItem.title,
+            isActive: existingItem.isActive,
+            isVisible: existingItem.isVisible,
+            deletedAt: existingItem.deletedAt?.toISOString() ?? null,
+          },
+          afterState: {
+            id,
+            isActive: false,
+            isVisible: false,
+            deletedAt: deletedAt.toISOString(),
+          },
+        },
+      });
+    });
+
+    return NextResponse.json({ ok: true, id, deletedAt: deletedAt.toISOString() });
+  } catch (error) {
+    if (error instanceof ShopValidationError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
+
+    console.error("Failed to delete shop item:", error);
+    return NextResponse.json({ ok: false, error: "Failed to delete shop item." }, { status: 500 });
   }
 }
