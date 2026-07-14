@@ -169,6 +169,10 @@
 }
 
 .itemIcon {
+
+  position: relative;
+  overflow: hidden;
+
   display: grid;
   place-items: center;
 

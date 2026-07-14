@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 
 import { useGameStore } from "@/game/gameStore";
@@ -477,8 +478,22 @@ export function ShopScreen({
             return (
               <article key={item.id} className={styles.itemCard}>
                 <div className={styles.itemTop}>
-                  <div className={styles.itemIcon} aria-hidden="true">
-                    {getItemIcon(item)}
+                  <div className={styles.itemIcon}>
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        unoptimized
+                        sizes="45px"
+                        style={{
+                          objectFit: "contain",
+                          padding: "6px",
+                        }}
+                      />
+                    ) : (
+                      <span aria-hidden="true">{getItemIcon(item)}</span>
+                    )}
                   </div>
                   <span className={styles.badge}>{getItemBadge(item)}</span>
                 </div>
