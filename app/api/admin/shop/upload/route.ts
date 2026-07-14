@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
+const SHOP_IMAGE_CACHE_SECONDS = 60 * 60 * 24 * 30;
 
 const allowedFileTypes = new Map<
   string,
@@ -19,24 +20,9 @@ const allowedFileTypes = new Map<
     extension: string;
   }
 >([
-  [
-    "image/png",
-    {
-      extension: "png",
-    },
-  ],
-  [
-    "image/jpeg",
-    {
-      extension: "jpg",
-    },
-  ],
-  [
-    "image/webp",
-    {
-      extension: "webp",
-    },
-  ],
+  ["image/png", { extension: "png" }],
+  ["image/jpeg", { extension: "jpg" }],
+  ["image/webp", { extension: "webp" }],
 ]);
 
 class UploadValidationError extends Error {
@@ -46,12 +32,16 @@ class UploadValidationError extends Error {
   }
 }
 
+class BlobConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BlobConfigurationError";
+  }
+}
+
 async function requireAdminSession(): Promise<boolean> {
   const cookieStore = await cookies();
-
-  const token = cookieStore.get(
-    ADMIN_SESSION_COOKIE,
-  )?.value;
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
   return verifyAdminSessionToken(token);
 }
@@ -113,13 +103,10 @@ function verifyFileSignature(
   switch (contentType) {
     case "image/png":
       return hasPngSignature(bytes);
-
     case "image/jpeg":
       return hasJpegSignature(bytes);
-
     case "image/webp":
       return hasWebpSignature(bytes);
-
     default:
       return false;
   }
@@ -129,38 +116,53 @@ function readRequestMetadata(request: Request): {
   ipAddress: string | null;
   userAgent: string | null;
 } {
-  const forwardedFor = request.headers.get(
-    "x-forwarded-for",
-  );
-
+  const forwardedFor = request.headers.get("x-forwarded-for");
   const ipAddress =
-    forwardedFor
-      ?.split(",")[0]
-      ?.trim() ||
+    forwardedFor?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     null;
 
-  const userAgent =
-    request.headers.get("user-agent");
-
   return {
     ipAddress,
-    userAgent,
+    userAgent: request.headers.get("user-agent"),
   };
 }
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse> {
+function readOptionalEnvironmentVariable(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
+function resolveBlobCredentials(): {
+  token?: string;
+  storeId?: string;
+} {
+  const token =
+    readOptionalEnvironmentVariable("slot_READ_WRITE_TOKEN") ??
+    readOptionalEnvironmentVariable("BLOB_READ_WRITE_TOKEN");
+
+  if (token) {
+    return { token };
+  }
+
+  const storeId =
+    readOptionalEnvironmentVariable("slot_STORE_ID") ??
+    readOptionalEnvironmentVariable("BLOB_STORE_ID");
+
+  if (storeId) {
+    return { storeId };
+  }
+
+  throw new BlobConfigurationError(
+    "Vercel Blob is not connected correctly. Configure slot_STORE_ID, BLOB_STORE_ID, slot_READ_WRITE_TOKEN, or BLOB_READ_WRITE_TOKEN for the public Blob store.",
+  );
+}
+
+export async function POST(request: Request): Promise<NextResponse> {
   if (!(await requireAdminSession())) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Unauthorized.",
-      },
-      {
-        status: 401,
-      },
+      { ok: false, error: "Unauthorized." },
+      { status: 401 },
     );
   }
 
@@ -169,29 +171,18 @@ export async function POST(
     const uploadedValue = formData.get("file");
 
     if (!(uploadedValue instanceof File)) {
-      throw new UploadValidationError(
-        "Image file is required.",
-      );
+      throw new UploadValidationError("Image file is required.");
     }
 
     if (uploadedValue.size <= 0) {
-      throw new UploadValidationError(
-        "Uploaded file is empty.",
-      );
+      throw new UploadValidationError("Uploaded file is empty.");
     }
 
-    if (
-      uploadedValue.size >
-      MAX_FILE_SIZE_BYTES
-    ) {
-      throw new UploadValidationError(
-        "Image size cannot exceed 4 MB.",
-      );
+    if (uploadedValue.size > MAX_FILE_SIZE_BYTES) {
+      throw new UploadValidationError("Image size cannot exceed 4 MB.");
     }
 
-    const allowedType = allowedFileTypes.get(
-      uploadedValue.type,
-    );
+    const allowedType = allowedFileTypes.get(uploadedValue.type);
 
     if (!allowedType) {
       throw new UploadValidationError(
@@ -199,83 +190,56 @@ export async function POST(
       );
     }
 
-    const fileBuffer =
-      await uploadedValue.arrayBuffer();
+    const fileBuffer = await uploadedValue.arrayBuffer();
+    const fileBytes = new Uint8Array(fileBuffer);
 
-    const fileBytes = new Uint8Array(
-      fileBuffer,
-    );
-
-    if (
-      !verifyFileSignature(
-        uploadedValue.type,
-        fileBytes,
-      )
-    ) {
+    if (!verifyFileSignature(uploadedValue.type, fileBytes)) {
       throw new UploadValidationError(
         "The uploaded file content does not match its image type.",
       );
     }
 
-    const safeBaseName = normalizeFileName(
-      uploadedValue.name,
-    );
+    const safeBaseName = normalizeFileName(uploadedValue.name);
+    const pathname = `shop/items/${safeBaseName}.${allowedType.extension}`;
+    const credentials = resolveBlobCredentials();
 
-    const pathname =
-      `shop/items/${safeBaseName}.${allowedType.extension}`;
-
-    const blobStoreId =
-  process.env.slot_STORE_ID?.trim();
-
-if (!blobStoreId) {
-  throw new Error(
-    "slot_STORE_ID is not configured.",
-  );
-}
-
-const blob = await put(
-  pathname,
-  fileBuffer,
-  {
-    access: "public",
-    storeId: blobStoreId,
-    addRandomSuffix: true,
-    contentType: uploadedValue.type,
-  },
-);
-
-    const {
-      ipAddress,
-      userAgent,
-    } = readRequestMetadata(request);
-
-    await prisma.adminAuditLog.create({
-      data: {
-        actor: "browser-admin",
-        action: "SHOP_IMAGE_UPLOAD",
-        entityType: "ShopAsset",
-
-        afterState: {
-          url: blob.url,
-          pathname: blob.pathname,
-          contentType: blob.contentType,
-          fileName: uploadedValue.name,
-          fileSize: uploadedValue.size,
-        },
-
-        metadata: {
-          downloadUrl: blob.downloadUrl,
-        },
-
-        ipAddress,
-        userAgent,
-      },
+    const blob = await put(pathname, fileBuffer, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: uploadedValue.type,
+      cacheControlMaxAge: SHOP_IMAGE_CACHE_SECONDS,
+      ...credentials,
     });
+
+    const { ipAddress, userAgent } = readRequestMetadata(request);
+
+    try {
+      await prisma.adminAuditLog.create({
+        data: {
+          actor: "browser-admin",
+          action: "SHOP_IMAGE_UPLOAD",
+          entityType: "ShopAsset",
+          afterState: {
+            url: blob.url,
+            pathname: blob.pathname,
+            contentType: blob.contentType,
+            fileName: uploadedValue.name,
+            fileSize: uploadedValue.size,
+          },
+          metadata: {
+            downloadUrl: blob.downloadUrl,
+          },
+          ipAddress,
+          userAgent,
+        },
+      });
+    } catch (auditError) {
+      console.error("Failed to write shop image upload audit log:", auditError);
+    }
 
     return NextResponse.json(
       {
         ok: true,
-
         image: {
           url: blob.url,
           downloadUrl: blob.downloadUrl,
@@ -285,38 +249,30 @@ const blob = await put(
           originalFileName: uploadedValue.name,
         },
       },
-      {
-        status: 201,
-      },
+      { status: 201 },
     );
   } catch (error) {
-    if (
-      error instanceof UploadValidationError
-    ) {
+    if (error instanceof UploadValidationError) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        {
-          status: 400,
-        },
+        { ok: false, error: error.message },
+        { status: 400 },
       );
     }
 
-    console.error(
-      "Failed to upload shop image:",
-      error,
-    );
+    if (error instanceof BlobConfigurationError) {
+      console.error("Shop image upload Blob configuration error:", error.message);
+
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 503 },
+      );
+    }
+
+    console.error("Failed to upload shop image:", error);
 
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Failed to upload shop image.",
-      },
-      {
-        status: 500,
-      },
+      { ok: false, error: "Failed to upload shop image." },
+      { status: 500 },
     );
   }
 }
