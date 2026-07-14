@@ -526,7 +526,9 @@ function assertPurchaseAllowed(params: {
     item.acquisitionMethod !==
       "PURCHASE" &&
     item.acquisitionMethod !==
-      "PURCHASE_OR_ACTION"
+      "PURCHASE_OR_ACTION" &&
+    item.acquisitionMethod !==
+      "FREE"
   ) {
     throw new PlayerShopError(
       "SHOP_ITEM_NOT_PURCHASABLE",
@@ -975,14 +977,16 @@ async function executePurchaseTransaction(
         playerItem?.purchaseCount ?? 0;
 
       const unitPrice =
-        calculateCurrentPrice({
-          basePrice: item.basePrice,
-          numerator:
-            item.priceGrowthNumerator,
-          denominator:
-            item.priceGrowthDenominator,
-          level: levelBefore,
-        });
+        item.acquisitionMethod === "FREE"
+          ? BigInt(0)
+          : calculateCurrentPrice({
+              basePrice: item.basePrice,
+              numerator:
+                item.priceGrowthNumerator,
+              denominator:
+                item.priceGrowthDenominator,
+              level: levelBefore,
+            });
 
       if (unitPrice < BigInt(0)) {
         throw new PlayerShopError(
@@ -1288,6 +1292,8 @@ async function executePurchaseTransaction(
                   item.itemAmount.toString(),
                 effectValue:
                   item.effectValue.toString(),
+                acquisitionMethod:
+                  item.acquisitionMethod,
                 purchaseCountBefore,
                 purchaseCountAfter,
               },
@@ -1295,45 +1301,47 @@ async function executePurchaseTransaction(
           },
         );
 
-      await transaction.balanceTransaction.create(
-        {
-          data: {
-            userId,
+      if (unitPrice > BigInt(0)) {
+        await transaction.balanceTransaction.create(
+          {
+            data: {
+              userId,
 
-            direction: "DEBIT",
-            source:
-              "SHOP_PURCHASE",
+              direction: "DEBIT",
+              source:
+                "SHOP_PURCHASE",
 
-            amount: unitPrice,
+              amount: unitPrice,
 
-            balanceBefore,
-            balanceAfter,
+              balanceBefore,
+              balanceAfter,
 
-            idempotencyKey:
-              `${idempotencyKey}:balance`,
+              idempotencyKey:
+                `${idempotencyKey}:balance`,
 
-            referenceType:
-              "ShopPurchase",
+              referenceType:
+                "ShopPurchase",
 
-            referenceId:
-              purchase.id,
-
-            description:
-              `Purchase of shop item "${item.title}"`,
-
-            createdBy: "player",
-
-            metadata: {
-              shopItemId:
-                item.id,
-              shopItemKey:
-                item.key,
-              shopPurchaseId:
+              referenceId:
                 purchase.id,
+
+              description:
+                `Purchase of shop item "${item.title}"`,
+
+              createdBy: "player",
+
+              metadata: {
+                shopItemId:
+                  item.id,
+                shopItemKey:
+                  item.key,
+                shopPurchaseId:
+                  purchase.id,
+              },
             },
           },
-        },
-      );
+        );
+      }
 
       const updatedState =
         await transaction.playerGameState.findUnique(
