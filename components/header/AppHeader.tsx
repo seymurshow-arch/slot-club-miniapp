@@ -150,6 +150,7 @@ export function AppHeader({
               sizes="64px"
               style={avatarFrameStyle}
               priority
+              unoptimized
             />
           )}
         </div>
